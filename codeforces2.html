@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codeforces Analytics Dashboard</title>
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --card-bg: #131a26;
+            --panel-bg: #1b2434;
+            --accent-blue: #0ea5e9;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --green-success: #10b981;
+            --red-alert: #ef4444;
+            --border-light: rgba(255, 255, 255, 0.08);
+
+            /* Codeforces Official Rank Colors */
+            --cf-newbie: #919191;
+            --cf-pupil: #008000;
+            --cf-specialist: #03a89e;
+            --cf-expert: #0000ff;
+            --cf-cmaster: #aa00aa;
+            --cf-master: #ff8c00;
+            --cf-grandmaster: #ff0000;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-light);
+            border-radius: 20px;
+            padding: 35px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+
+        header h1 span {
+            color: var(--accent-blue);
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* Search Section */
+        .search-area {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 35px;
+        }
+
+        .search-area input {
+            flex: 1;
+            padding: 16px 20px;
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            background: #0b111a;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .search-area input:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+        }
+
+        .search-area button {
+            padding: 16px 32px;
+            background: var(--accent-blue);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .search-area button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        /* Async Loaders & Errors */
+        .status-msg {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            font-weight: 500;
+        }
+
+        .loader {
+            color: var(--accent-blue);
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+
+        .error {
+            color: var(--red-alert);
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        /* Dashboard Component Visibility */
+        .main-dashboard {
+            display: none;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Profile Showcase Card */
+        .profile-container {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            background: var(--panel-bg);
+            padding: 24px;
+            border-radius: 16px;
+            border: 1px solid var(--border-light);
+            margin-bottom: 30px;
+        }
+
+        .avatar-frame {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--border-light);
+        }
+
+        .info-frame h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .rank-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 25px;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        .stats-row span strong {
+            color: var(--text-primary);
+        }
+
+        /* Grid Configuration for Distribution and Activity */
+        .grid-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (min-width: 768px) {
+            .grid-row { grid-template-columns: 1fr 1fr; }
+        }
+
+        .panel-box {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-heading {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            padding-left: 10px;
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        /* Rating Blocks Viewports */
+        .distribution-block {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+            gap: 10px;
+            max-height: 350px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .chip-stat {
+            background: rgba(11, 17, 26, 0.4);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 12px 8px;
+            text-align: center;
+            transition: transform 0.2s ease;
+        }
+
+        .chip-stat:hover {
+            transform: scale(1.03);
+        }
+
+        .chip-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .chip-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        /* Daily Submissions Timeline */
+        .timeline-container {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            max-height: 350px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .timeline-day {
+            background: rgba(11, 17, 26, 0.4);
+            border: 1px solid var(--border-light);
+            padding: 14px;
+            border-radius: 10px;
+        }
+
+        .timeline-date {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+            margin-bottom: 8px;
+        }
+
+        .pill-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .rating-pill {
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 4px 8px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        /* Contests Performance Table */
+        .table-overflow {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: #111823;
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding: 14px 16px;
+            border-bottom: 2px solid var(--border-light);
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .delta-up { color: var(--green-success); font-weight: 600; }
+        .delta-down { color: var(--red-alert); font-weight: 600; }
+
+        /* Custom Scrollbar Styles */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+        /* Footer styling constraints */
+        footer {
+            margin-top: auto;
+            padding-top: 50px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-align: center;
+            letter-spacing: 0.3px;
+        }
+
+        footer span {
+            color: var(--red-alert);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Codeforces <span>Metric Engine</span></h1>
+            <p>Analyze profile standings, contest dynamics, and daily rating distribution tracks</p>
+        </header>
+        
+        <div class="search-area">
+            <input type="text" id="handle-input" placeholder="Type user handle here..." autocomplete="off">
+            <button id="search-btn">Run Analysis</button>
+        </div>
+
+        <div class="status-msg loader" id="loader-node">Connecting to competitive programming stream arrays...</div>
+        <div class="status-msg error" id="error-node"></div>
+
+        <div class="main-dashboard" id="dashboard-node">
+            
+            <div class="profile-container">
+                <img src="" alt="Avatar Image" class="avatar-frame" id="avatar-element">
+                <div class="info-frame">
+                    <h2 id="handle-element">Handle</h2>
+                    <div class="rank-badge" id="rank-element">Rank Status</div>
+                    <div class="stats-row">
+                        <span id="live-rating-element">Live Rating: <strong>-</strong></span>
+                        <span id="max-rating-element">Peak Rating: <strong>-</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-row">
+                <div class="panel-box">
+                    <div class="panel-heading">Questions Solved by Rating</div>
+                    <div class="distribution-block" id="distribution-element"></div>
+                </div>
+
+                <div class="panel-box">
+                    <div class="panel-heading">Daily Rating Output (Last 7 Days)</div>
+                    <div class="timeline-container" id="timeline-element"></div>
+                </div>
+            </div>
+
+            <div class="panel-box">
+                <div class="panel-heading">Recent Official Contest History</div>
+                <div class="table-overflow">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Contest Description</th>
+                                <th>Rank</th>
+                                <th>Rating Delta (Δ)</th>
+                                <th>Performance Rating</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contest-element">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <footer>Made with <span>love</span>, by Rahul</footer>
+
+    <script>
+        // System variables mapping custom context credentials securely
+        const CONFIG = {
+            apiKey: "9b3976155a82a8dbe227e0452418281f8696e9a1"
+        };
+
+        const searchBtn = document.getElementById('search-btn');
+        const handleInput = document.getElementById('handle-input');
+        const loaderNode = document.getElementById('loader-node');
+        const errorNode = document.getElementById('error-node');
+        const dashboardNode = document.getElementById('dashboard-node');
+
+        searchBtn.addEventListener('click', dispatchEnginePipeline);
+        handleInput.addEventListener('keypress', (e) => { e.key === 'Enter' && dispatchEnginePipeline(); });
+
+        // Utility method mapping performance constraints into Hex styles dynamically
+        function fetchHexStyle(rating) {
+            if (!rating || rating === 'Unrated') return 'var(--cf-newbie)';
+            if (rating < 1200) return 'var(--cf-newbie)';
+            if (rating < 1400) return 'var(--cf-pupil)';
+            if (rating < 1600) return 'var(--cf-specialist)';
+            if (rating < 1900) return 'var(--cf-expert)';
+            if (rating < 2100) return 'var(--cf-cmaster)';
+            if (rating < 2400) return 'var(--cf-master)';
+            return 'var(--cf-grandmaster)';
+        }
+
+        async function dispatchEnginePipeline() {
+            const handle = handleInput.value.trim();
+            if (!handle) return;
+
+            errorNode.style.display = 'none';
+            dashboardNode.style.display = 'none';
+            loaderNode.style.display = 'block';
+
+            try {
+                // Fetch context pools concurrently using Promise.all across safe endpoints
+                const [infoPool, statusPool, ratingPool] = await Promise.all([
+                    fetch(`https://codeforces.com/api/user.info?handles=${encodeURIComponent(handle)}`),
+                    fetch(`https://codeforces.com/api/user.status?handle=${encodeURIComponent(handle)}`),
+                    fetch(`https://codeforces.com/api/user.rating?handle=${encodeURIComponent(handle)}`)
+                ]);
+
+                const infoRes = await infoPool.json();
+                const statusRes = await statusPool.json();
+                const ratingRes = await ratingPool.json();
+
+                if (infoRes.status !== "OK" || statusRes.status !== "OK" || ratingRes.status !== "OK") {
+                    throw new Error("Target extraction stream rejected. Please verify your handle spelling.");
+                }
+
+                // Initialize system component updates
+                parseProfileNode(infoRes.result[0]);
+                parseSubmissionsNode(statusRes.result);
+                parseContestHistoryNode(ratingRes.result);
+
+                dashboardNode.style.display = 'block';
+            } catch (err) {
+                errorNode.textContent = err.message.includes("rejected") ? err.message : `Handle "${handle}" does not exist on Codeforces.`;
+                errorNode.style.display = 'block';
+            } finally {
+                loaderNode.style.display = 'none';
+            }
+        }
+
+        function parseProfileNode(user) {
+            document.getElementById('avatar-element').src = user.titlePhoto || 'https://userpic.codeforces.org/no-title-photo.jpg';
+            
+            const nameEl = document.getElementById('handle-element');
+            nameEl.textContent = user.handle;
+            nameEl.style.color = fetchHexStyle(user.rating);
+
+            const rankEl = document.getElementById('rank-element');
+            rankEl.textContent = user.rank || 'Unrated';
+            rankEl.style.color = fetchHexStyle(user.rating);
+            rankEl.style.border = `1px solid ${fetchHexStyle(user.rating)}`;
+
+            document.getElementById('live-rating-element').innerHTML = `Live Rating: <strong style="color:${fetchHexStyle(user.rating)}">${user.rating || 0}</strong>`;
+            document.getElementById('max-rating-element').innerHTML = `Peak Rating: <strong style="color:${fetchHexStyle(user.maxRating)}">${user.maxRating || 0}</strong>`;
+        }
+
+        function parseSubmissionsNode(submissions) {
+            const uniqueSolvedProblems = new Set();
+            const totalDistribution = {};
+            const weeklyChronologyLog = {};
+
+            // Synchronize past 7 calendar dates inside array maps
+            for (let i = 0; i < 7; i++) {
+                const dayOffset = new Date();
+                dayOffset.setDate(dayOffset.getDate() - i);
+                const stringFormat = dayOffset.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                weeklyChronologyLog[stringFormat] = {};
+            }
+
+            const activeTimestamp = Math.floor(Date.now() / 1000);
+            const absoluteSevenDaysWindow = activeTimestamp - (7 * 24 * 60 * 60);
+
+            submissions.forEach(sub => {
+                if (sub.verdict === "OK") {
+                    const challenge = sub.problem;
+                    const signatureKey = `${challenge.contestId}-${challenge.index}`;
+
+                    if (!uniqueSolvedProblems.has(signatureKey)) {
+                        uniqueSolvedProblems.add(signatureKey);
+                        const tierRating = challenge.rating || 'Unrated';
+
+                        // Process Lifetime Totals
+                        totalDistribution[tierRating] = (totalDistribution[tierRating] || 0) + 1;
+
+                        // Map Rolling Weekly Activity Timeline logs
+                        if (sub.creationTimeSeconds >= absoluteSevenDaysWindow) {
+                            const eventTime = new Date(sub.creationTimeSeconds * 1000);
+                            const keyMatch = eventTime.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                            
+                            if (weeklyChronologyLog[keyMatch] !== undefined) {
+                                weeklyChronologyLog[keyMatch][tierRating] = (weeklyChronologyLog[keyMatch][tierRating] || 0) + 1;
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 1. Generate Overall Lifetime Distribution Component Chips
+            const distContainer = document.getElementById('distribution-element');
+            distContainer.innerHTML = '';
+            
+            const chronologicalKeys = Object.keys(totalDistribution).filter(k => k !== 'Unrated').map(Number).sort((a, b) => a - b);
+            if (totalDistribution['Unrated']) chronologicalKeys.push('Unrated');
+
+            if (chronologicalKeys.length === 0) {
+                distContainer.innerHTML = `<div style="grid-column: 1/-1; color: var(--text-secondary); text-align: center; padding: 20px;">No resolved submissions located.</div>`;
+            } else {
+                chronologicalKeys.forEach(tier => {
+                    const count = totalDistribution[tier];
+                    const hexColor = fetchHexStyle(tier);
+                    
+                    const chipNode = document.createElement('div');
+                    chipNode.className = 'chip-stat';
+                    chipNode.style.borderTop = `3px solid ${hexColor}`;
+                    chipNode.innerHTML = `
+                        <div class="chip-label">${tier}</div>
+                        <div class="chip-value" style="color: ${hexColor}">${count}</div>
+                    `;
+                    distContainer.appendChild(chipNode);
+                });
+            }
+
+            // 2. Generate Daily Log Tracking Logs
+            const timelineContainer = document.getElementById('timeline-element');
+            timelineContainer.innerHTML = '';
+
+            Object.keys(weeklyChronologyLog).forEach(date => {
+                const dayWrapper = document.createElement('div');
+                dayWrapper.className = 'timeline-day';
+
+                const bucketData = weeklyChronologyLog[date];
+                let accumulationHtml = '';
+
+                Object.keys(bucketData).sort((a, b) => (Number(a) || 0) - (Number(b) || 0)).forEach(rating => {
+                    const colorValue = fetchHexStyle(rating);
+                    accumulationHtml += `<span class="rating-pill" style="color: ${colorValue}; border-color: rgba(${rating === 'Unrated' ? '148,163,184' : '14,165,233'}, 0.25)">R-${rating}: <strong>${bucketData[rating]} Solved</strong></span>`;
+                });
+
+                if (!accumulationHtml) {
+                    accumulationHtml = `<span class="rating-pill" style="color: var(--text-secondary)">No problem arrays cleared on this date</span>`;
+                }
+
+                dayWrapper.innerHTML = `
+                    <div class="timeline-date">${date}</div>
+                    <div class="pill-box">${accumulationHtml}</div>
+                `;
+                timelineContainer.appendChild(dayWrapper);
+            });
+        }
+
+        function parseContestHistoryNode(contests) {
+            const historyBody = document.getElementById('contest-element');
+            historyBody.innerHTML = '';
+
+            if (contests.length === 0) {
+                historyBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color: var(--text-secondary); padding: 24px;">No official context evaluations tracked for this user identifier.</td></tr>`;
+                return;
+            }
+
+            // Reverse chronological slice pulling up to last 6 participation entries
+            const structuredPool = [...contests].reverse().slice(0, 6);
+
+            structuredPool.forEach(entry => {
+                const variationDelta = entry.newRating - entry.oldRating;
+                const evaluatedClass = variationDelta >= 0 ? 'delta-up' : 'delta-down';
+                const formattingPrefix = variationDelta >= 0 ? '+' : '';
+
+                const rowNode = document.createElement('tr');
+                rowNode.innerHTML = `
+                    <td><strong style="color: var(--text-primary)">${entry.contestName}</strong></td>
+                    <td>#${entry.rank}</td>
+                    <td class="${evaluatedClass}">${formattingPrefix}${variationDelta}</td>
+                    <td><span style="color: ${fetchHexStyle(entry.newRating)}; font-weight:700">${entry.newRating}</span></td>
+                `;
+                historyBody.appendChild(rowNode);
+            });
+        }
+    </script>
+</body>
+</html>
