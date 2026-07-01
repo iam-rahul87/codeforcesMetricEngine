@@ -31,4 +31,4 @@ Since this application is completely serverless and independent of heavy build t
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git](https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git)
+   git clone [https://github.com/iam-rahul87/codeforcesMetricEngine]
