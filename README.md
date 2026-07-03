@@ -4,7 +4,7 @@ A modern, high-performance, single-page web application designed for competitive
 
 Featuring a premium dark-mode dashboard interface, this tool aggregates data across multiple public Codeforces API endpoints seamlessly in real-time.
 
-![Dashboard Preview]((https://iam-rahul87.github.io/codeforcesMetricEngine/)) ---
+![Dashboard Preview](https://iam-rahul87.github.io/codeforcesMetricEngine/index.html) ---
 
 ## ✨ Features
 
